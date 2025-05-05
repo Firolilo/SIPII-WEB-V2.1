@@ -192,7 +192,7 @@ const Dashboard = () => {
                                 <Popup>
                                     <strong>Punto de calor detectado</strong><br />
                                     Fecha: {new Date(fire.date).toLocaleString()}<br />
-                                    Confianza: {fire.confidence}%
+                                    Confianza: {fire.confidence}
                                 </Popup>
                             </Marker>
                         ))}
@@ -396,18 +396,15 @@ const Dashboard = () => {
                         <h3 style={{ color: colors.danger, marginTop: 0 }}>
                             Alertas de Incendios ({fireData.length})
                         </h3>
-                        {fireData.slice(0, 3).map((fire, index) => (
+                        {fireData.map((fire, index) => (
                             <div key={`alert-${index}`} style={{ marginBottom: '10px' }}>
                                 <p>
                                     <strong>Punto {index + 1}:</strong>
                                     Lat: {fire.lat.toFixed(4)}, Lng: {fire.lng.toFixed(4)}
                                 </p>
-                                <p>Confianza: {fire.confidence}% - {new Date(fire.date).toLocaleString()}</p>
+                                <p>Confianza: {fire.confidence} - {new Date(fire.date).toLocaleString()}</p>
                             </div>
                         ))}
-                        {fireData.length > 3 && (
-                            <p>+ {fireData.length - 3} puntos más...</p>
-                        )}
                     </div>
                 )}
             </main>

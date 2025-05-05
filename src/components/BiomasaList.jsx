@@ -1,21 +1,31 @@
-// src/components/BiomasaList.jsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { colors } from '../styles/theme';
 
 const BiomasaList = ({ biomasas, onSelect, onDelete, selectedId }) => {
     const [filter, setFilter] = useState('');
-    const [sortBy, setSortBy] = useState('fecha');
+    const [filterBy, setFilterBy] = useState('tipoBiomasa');
+    const [selectedFilterValue, setSelectedFilterValue] = useState('');
 
-    const filteredBiomasas = biomasas.filter(biomasa =>
-        biomasa.tipoBiomasa.toLowerCase().includes(filter.toLowerCase()) ||
-        biomasa.estadoConservacion.toLowerCase().includes(filter.toLowerCase())
-    );
+    // Generar valores únicos para cada filtro (solo "Tipo" y "Estado")
+    const uniqueValues = useMemo(() => {
+        if (filterBy === 'tipoBiomasa') {
+            return [...new Set(biomasas.map(biomasa => biomasa.tipoBiomasa))];
+        }
+        if (filterBy === 'estadoConservacion') {
+            return [...new Set(biomasas.map(biomasa => biomasa.estadoConservacion))];
+        }
+        return [];
+    }, [filterBy, biomasas]);
 
-    const sortedBiomasas = [...filteredBiomasas].sort((a, b) => {
-        if (sortBy === 'fecha') return new Date(b.fecha) - new Date(a.fecha);
-        if (sortBy === 'area') return b.area - a.area;
-        return a[sortBy]?.localeCompare(b[sortBy]);
-    });
+    // Filtrar biomasas si hay un valor seleccionado, o mostrar todas si no
+    const filteredBiomasas = useMemo(() => {
+        return biomasas.filter(biomasa => {
+            const value = biomasa[filterBy]?.toString().toLowerCase();
+            const filterValue = selectedFilterValue?.toLowerCase();
+            const isFilterMatched = selectedFilterValue ? value === filterValue : true;
+            return isFilterMatched && value?.includes(filter.toLowerCase());
+        });
+    }, [filter, selectedFilterValue, filterBy, biomasas]);
 
     return (
         <div style={{
@@ -46,25 +56,43 @@ const BiomasaList = ({ biomasas, onSelect, onDelete, selectedId }) => {
             </div>
 
             <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
-                <label>Ordenar por:</label>
+                <label>Filtrar por:</label>
                 <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
+                    value={filterBy}
+                    onChange={(e) => {
+                        setFilterBy(e.target.value);
+                        setSelectedFilterValue(''); // Resetear la selección de valor al cambiar el filtro
+                    }}
                     style={{ padding: '5px', borderRadius: '4px' }}
                 >
-                    <option value="fecha">Fecha</option>
                     <option value="tipoBiomasa">Tipo</option>
                     <option value="estadoConservacion">Estado</option>
-                    <option value="area">Área</option>
                 </select>
             </div>
 
+            <div style={{ marginBottom: '15px' }}>
+                {uniqueValues.length > 0 && (
+                    <select
+                        value={selectedFilterValue}
+                        onChange={(e) => setSelectedFilterValue(e.target.value)}
+                        style={{ padding: '5px', borderRadius: '4px' }}
+                    >
+                        <option value="">Seleccionar...</option> {/* Modificado aquí */}
+                        {uniqueValues.map((value, index) => (
+                            <option key={index} value={value}>
+                                {value}
+                            </option>
+                        ))}
+                    </select>
+                )}
+            </div>
+
             <div style={{ overflowY: 'auto', flex: 1 }}>
-                {sortedBiomasas.length === 0 ? (
+                {filteredBiomasas.length === 0 ? (
                     <p style={{ textAlign: 'center', color: colors.gray }}>No hay biomasas registradas</p>
                 ) : (
                     <div style={{ display: 'grid', gap: '10px' }}>
-                        {sortedBiomasas.map(biomasa => (
+                        {filteredBiomasas.map(biomasa => (
                             <div
                                 key={biomasa.id}
                                 onClick={() => onSelect(biomasa)}

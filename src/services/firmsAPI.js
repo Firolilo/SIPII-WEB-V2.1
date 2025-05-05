@@ -34,8 +34,8 @@ function parseCsv(csv) {
             fires.push({
                 lat: lat,
                 lng: lng,
-                date: data[2] || 'Fecha desconocida',
-                confidence: !isNaN(parseFloat(data[3])) ? parseFloat(data[3]) : 0
+                date: data[6] || 'Fecha desconocida',
+                confidence: !isNaN(parseFloat(data[12])) ? parseFloat(data[12]) : 0
             });
         } else {
             console.warn('Coordenadas inválidas en línea:', i, data);
