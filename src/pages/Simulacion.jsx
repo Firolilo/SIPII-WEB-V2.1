@@ -13,43 +13,56 @@ import StatBox from "../components/StatBox";
 import RangeInput from "../components/RangeInput";
 import { colors, sizes } from "../styles/theme";
 import {gql, useMutation, useQuery} from "@apollo/client";
-// Fix: Renamed the import to avoid conflict with state variable
-import * as leafletLib from "leaflet";
+
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
-
+const UPDATE_NAME = gql`
+    mutation UpdateName($id: ID!, $name: String!) {
+        updateFireRiskName(id: $id, name: $name) {
+            id
+            name
+        }
+    }
+`;
 
 const SAVE_SIMULATION = gql`
-  mutation SaveSimulation($input: SimulationInput!) {
-    saveSimulation(input: $input) {
-      id
-      timestamp
+    mutation SaveSimulation($input: SimulationInput!) {
+        saveSimulation(input: $input) {
+            id
+            timestamp
+        }
     }
-  }
 `;
 
 const GET_HISTORICAL_DATA = gql`
-  query GetHistoricalData {
-    getChiquitosFireRiskData(count: 10) {
-      id
-      timestamp
-      fireRisk
-      parameters { 
-        temperature
-        humidity
-        windSpeed
-        windDirection
-        simulationSpeed
-      }
-       initialFires {       
-        lat
-        lng
-        intensity
-      }
+    query GetHistoricalData {
+        getChiquitosFireRiskData(count: 10) {
+            id
+            timestamp
+            duration
+            name
+            location
+            fireRisk
+            parameters {
+                temperature
+                humidity
+                windSpeed
+                windDirection
+                simulationSpeed
+            }
+            initialFires {
+                lat
+                lng
+                intensity
+            }
+        }
     }
-  }
 `;
-
+const DELETE_SIMULATION = gql`
+    mutation DeleteSimulation($id: ID!) {
+        deleteFireRiskData(id: $id)
+    }
+`;
 const SIMULATION_CONFIG = {
     MAX_ACTIVE_FIRES: 50,
     MERGE_DISTANCE: 0.02,
@@ -105,6 +118,9 @@ const Simulacion = () => {
     const [isAutoStop, setIsAutoStop] = useState(false);
     const [initialFires, setInitialFires] = useState([]);
     const [saveSimulation] = useMutation(SAVE_SIMULATION);
+    const [deleteSimulation] = useMutation(DELETE_SIMULATION);
+    const [updateName] = useMutation(UPDATE_NAME);
+
     const { data: historicalData, refetch: refetchHistoricalData } = useQuery(GET_HISTORICAL_DATA);
 
     // Formatear datos históricos
@@ -112,8 +128,9 @@ const Simulacion = () => {
         ?.map(item => ({
             id: item.id,
             fecha: new Date(item.timestamp).toLocaleDateString(),
-            nombre: item.location ?? '—',                // nuevo
-            duracion: '20 s',                            // placeholder
+            nombre: item.name || item.location,      // ← muestra location si name vacío
+            tieneNombre: !!item.name,
+            duracion: item.duration ? `${item.duration}s` : '—',
             focos: item.initialFires?.length ?? 0,       // nuevo
             parameters: item.parameters,
             initialFires: item.initialFires
@@ -180,6 +197,7 @@ const Simulacion = () => {
             const simulationData = {
                 timestamp: new Date().toISOString(),
                 location: "San José de Chiquitos",
+                duration: timeElapsed,
                 coordinates: {
                     lat: typeof mapCenter.lat === 'function' ? mapCenter.lat() : mapCenter.lat,
                     lng: typeof mapCenter.lng === 'function' ? mapCenter.lng() : mapCenter.lng
@@ -252,6 +270,13 @@ const Simulacion = () => {
             showNotification(`Error al guardar: ${errorMessage}`, "error");
         }
     };
+    const buildCurrentParameters = () => ({
+        temperature,
+        humidity,
+        windSpeed,
+        windDirection,
+        simulationSpeed
+    });
 
     const repeatSimulation = (parameters, initialFires) => {
         if (!parameters || !initialFires || !Array.isArray(initialFires)) {
@@ -466,11 +491,22 @@ const Simulacion = () => {
 
     const handleRepeat = () => {
         setShowSaveModal(false);
+
+        // ⚠️ deja intactos initialFires y sólo resetea contadores
         setTimeElapsed(0);
-        setFires([]);
-        setSimulationActive(false);
         setIsAutoStop(false);
+
+        // Usa repeatSimulation con los datos en memoria
+        repeatSimulation(
+            buildCurrentParameters(),
+            initialFires.map(f => ({
+                lat: f.position[0],
+                lng: f.position[1],
+                intensity: f.intensity
+            }))
+        );
     };
+
 
     return (
         <div style={{
@@ -824,54 +860,111 @@ const Simulacion = () => {
                         maxHeight: '80vh',
                         overflowY: 'auto'
                     }}>
-                        <h3 style={{
-                            marginTop: 0,
-                            color: colors.primary,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px'
-                        }}>
+                        <h3
+                            style={{
+                                marginTop: 0,
+                                color: colors.primary,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px'
+                            }}
+                        >
                             📋 Historial de Simulaciones
                         </h3>
 
-                        <div style={{ margin: '1.5rem 0' }}>
-                            <table style={{
-                                width: '100%',
-                                borderCollapse: 'collapse',
-                                textAlign: 'left'
-                            }}>
+                        <div style={{margin: '1.5rem 0'}}>
+                            <table
+                                style={{
+                                    width: '100%',
+                                    borderCollapse: 'collapse',
+                                    textAlign: 'left'
+                                }}
+                            >
                                 <thead>
-                                <tr style={{ borderBottom: `2px solid ${colors.light}` }}>
-                                    <th style={{ padding: '8px' }}>Fecha</th>
-                                    <th style={{ padding: '8px' }}>Nombre</th>
-                                    <th style={{ padding: '8px' }}>Duración</th>
-                                    <th style={{ padding: '8px' }}>Focos</th>
-                                    <th style={{ padding: '8px' }}>Acción</th>
+                                <tr style={{borderBottom: `2px solid ${colors.light}`}}>
+                                    <th style={{padding: '8px'}}>Fecha</th>
+                                    <th style={{padding: '8px'}}>Nombre</th>
+                                    <th style={{padding: '8px'}}>Duración</th>
+                                    <th style={{padding: '8px'}}>Focos</th>
+                                    <th style={{padding: '8px'}}>Acción</th>
                                 </tr>
                                 </thead>
+
                                 <tbody>
                                 {formattedHistory.map((item) => (
                                     <tr
                                         key={item.id}
                                         style={{
                                             borderBottom: `1px solid ${colors.light}`,
-                                            ':hover': {
-                                                backgroundColor: `${colors.light}20`
-                                            }
+                                            ':hover': {backgroundColor: `${colors.light}20`}
                                         }}
                                     >
-                                        <td style={{ padding: '8px' }}>{item.fecha}</td>
-                                        <td style={{ padding: '8px' }}>{item.nombre}</td>
-                                        <td style={{ padding: '8px' }}>{item.duracion}</td>
-                                        <td style={{ padding: '8px' }}>{item.focos}</td>
-                                        <td style={{ padding: '8px' }}>
+                                        {/* FECHA */}
+                                        <td style={{padding: '8px'}}>{item.fecha}</td>
+
+                                        {/* NOMBRE + botón Asignar / Editar (solo ADMIN) */}
+                                        <td style={{padding: '8px'}}>
+                                            {item.nombre}
+                                            {user?.role === 'admin' && (
+                                                <Button
+                                                    variant="outline"
+                                                    style={{marginLeft: 8, padding: '2px 6px'}}
+                                                    onClick={async () => {
+                                                        const nuevo = prompt(
+                                                            'Nombre de la simulación:',
+                                                            item.nombre
+                                                        );
+                                                        if (!nuevo || nuevo === item.nombre) return;
+                                                        try {
+                                                            await updateName({
+                                                                variables: {id: item.id, name: nuevo}
+                                                            });
+                                                            await refetchHistoricalData();
+                                                            showNotification('Nombre actualizado', 'success');
+                                                        } catch {
+                                                            showNotification('Error al actualizar nombre', 'error');
+                                                        }
+                                                    }}
+                                                >
+                                                    {item.tieneNombre ? 'Editar' : 'Asignar'}
+                                                </Button>
+                                            )}
+                                        </td>
+
+                                        {/* DURACIÓN y FOCOS */}
+                                        <td style={{padding: '8px'}}>{item.duracion}</td>
+                                        <td style={{padding: '8px'}}>{item.focos}</td>
+
+                                        {/* ACCIÓN: Repetir / Eliminar */}
+                                        <td style={{padding: '8px'}}>
                                             <Button
                                                 variant="text"
-                                                onClick={() => repeatSimulation(item.parameters, item.initialFires)}
-                                                style={{ padding: '4px 8px' }}
+                                                onClick={() =>
+                                                    repeatSimulation(item.parameters, item.initialFires)
+                                                }
+                                                style={{padding: '4px 8px'}}
                                             >
                                                 Repetir
                                             </Button>
+
+                                            {user?.role === 'admin' && (
+                                                <Button
+                                                    variant="danger"
+                                                    style={{marginLeft: 8, padding: '4px 8px'}}
+                                                    onClick={async () => {
+                                                        if (!window.confirm('¿Eliminar esta simulación?')) return;
+                                                        try {
+                                                            await deleteSimulation({variables: {id: item.id}});
+                                                            await refetchHistoricalData();
+                                                            showNotification('Simulación eliminada', 'success');
+                                                        } catch {
+                                                            showNotification('Error al eliminar', 'error');
+                                                        }
+                                                    }}
+                                                >
+                                                    Eliminar
+                                                </Button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
@@ -879,16 +972,15 @@ const Simulacion = () => {
                             </table>
                         </div>
 
-                        <div style={{
-                            display: 'flex',
-                            gap: '1rem',
-                            justifyContent: 'flex-end',
-                            marginTop: '1.5rem'
-                        }}>
-                            <Button
-                                variant="outline"
-                                onClick={() => setShowHistoryModal(false)}
-                            >
+                        <div
+                            style={{
+                                display: 'flex',
+                                gap: '1rem',
+                                justifyContent: 'flex-end',
+                                marginTop: '1.5rem'
+                            }}
+                        >
+                            <Button variant="outline" onClick={() => setShowHistoryModal(false)}>
                                 Cerrar
                             </Button>
                         </div>
@@ -899,14 +991,14 @@ const Simulacion = () => {
     );
 };
 
-const RangeControl = ({ label, value, onChange, min, max, step = 1, disabled = false }) => (
+const RangeControl = ({label, value, onChange, min, max, step = 1, disabled = false}) => (
     <div style={{
         backgroundColor: 'white',
         padding: '15px',
         borderRadius: sizes.borderRadius,
         boxShadow: sizes.boxShadow
     }}>
-        <h4 style={{ marginTop: 0, color: colors.primary }}>{label}</h4>
+        <h4 style={{marginTop: 0, color: colors.primary}}>{label}</h4>
         <RangeInput
             min={min}
             max={max}

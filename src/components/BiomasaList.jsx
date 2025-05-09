@@ -1,31 +1,48 @@
 import React, { useState, useMemo } from 'react';
 import { colors } from '../styles/theme';
 
-const BiomasaList = ({ biomasas, onSelect, onDelete, selectedId }) => {
+const BiomasaList = ({ biomasas, onSelect, onDelete, selectedId, onFiltered }) => {
     const [filter, setFilter] = useState('');
     const [filterBy, setFilterBy] = useState('tipoBiomasa');
     const [selectedFilterValue, setSelectedFilterValue] = useState('');
+    const [densityFilter, setDensityFilter] = useState('');
 
-    // Generar valores únicos para cada filtro (solo "Tipo" y "Estado")
+    // Valores únicos para cada filtro
     const uniqueValues = useMemo(() => {
         if (filterBy === 'tipoBiomasa') {
-            return [...new Set(biomasas.map(biomasa => biomasa.tipoBiomasa))];
+            return ['bosque', 'sabana', 'humedal', 'pastizal', 'matorral arbustivo'];
         }
         if (filterBy === 'estadoConservacion') {
-            return [...new Set(biomasas.map(biomasa => biomasa.estadoConservacion))];
+            return ['excelente', 'bueno', 'regular', 'degradado'];
+        }
+        if (filterBy === 'densidad') {
+            return ['baja', 'media', 'alta'];
         }
         return [];
-    }, [filterBy, biomasas]);
+    }, [filterBy]);
 
-    // Filtrar biomasas si hay un valor seleccionado, o mostrar todas si no
+    // Filtrar biomasas
     const filteredBiomasas = useMemo(() => {
-        return biomasas.filter(biomasa => {
-            const value = biomasa[filterBy]?.toString().toLowerCase();
-            const filterValue = selectedFilterValue?.toLowerCase();
-            const isFilterMatched = selectedFilterValue ? value === filterValue : true;
-            return isFilterMatched && value?.includes(filter.toLowerCase());
+        const result = biomasas.filter(biomasa => {
+            const matchesTextFilter = filter === '' ||
+                biomasa[filterBy]?.toString().toLowerCase().includes(filter.toLowerCase());
+
+            const matchesSelectedFilter = selectedFilterValue === '' ||
+                biomasa[filterBy]?.toString().toLowerCase() === selectedFilterValue.toLowerCase();
+
+            const matchesDensityFilter = densityFilter === '' ||
+                biomasa.densidad?.toString().toLowerCase() === densityFilter.toLowerCase();
+
+            return matchesTextFilter && matchesSelectedFilter && matchesDensityFilter;
         });
-    }, [filter, selectedFilterValue, filterBy, biomasas]);
+
+        // Notificar al componente padre sobre la lista filtrada
+        if (onFiltered) {
+            onFiltered(result);
+        }
+
+        return result;
+    }, [filter, selectedFilterValue, filterBy, densityFilter, biomasas, onFiltered]);
 
     return (
         <div style={{
@@ -34,120 +51,228 @@ const BiomasaList = ({ biomasas, onSelect, onDelete, selectedId }) => {
             padding: '15px',
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
             height: '100%',
+            maxHeight: 'calc(100vh - 200px)',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column'
         }}>
-            <h3 style={{ marginTop: 0, color: colors.primary }}>Áreas de Biomasa</h3>
+            <h3 style={{
+                marginTop: 0,
+                marginBottom: '15px',
+                color: colors.primary,
+                fontSize: '1.2rem'
+            }}>
+                Áreas de Biomasa ({filteredBiomasas.length})
+            </h3>
 
-            <div style={{ marginBottom: '15px' }}>
-                <input
-                    type="text"
-                    placeholder="Buscar biomasas..."
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
-                    style={{
-                        width: '100%',
-                        padding: '8px',
-                        borderRadius: '4px',
-                        border: `1px solid ${colors.lightGray}`
-                    }}
-                />
+            {/* Filtros */}
+            <div style={{
+                marginBottom: '15px',
+                display: 'grid',
+                gridTemplateColumns: '1fr',
+                gap: '10px'
+            }}>
+                <div>
+                    <input
+                        type="text"
+                        placeholder="Buscar..."
+                        value={filter}
+                        onChange={(e) => setFilter(e.target.value)}
+                        style={{
+                            width: '100%',
+                            padding: '8px',
+                            borderRadius: '4px',
+                            border: `1px solid ${colors.lightGray}`,
+                            fontSize: '0.9rem'
+                        }}
+                    />
+                </div>
+
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                    gap: '8px'
+                }}>
+                    <div>
+                        <select
+                            value={filterBy}
+                            onChange={(e) => {
+                                setFilterBy(e.target.value);
+                                setSelectedFilterValue('');
+                            }}
+                            style={{
+                                width: '100%',
+                                padding: '6px',
+                                borderRadius: '4px',
+                                fontSize: '0.85rem'
+                            }}
+                        >
+                            <option value="tipoBiomasa">Tipo</option>
+                            <option value="estadoConservacion">Estado</option>
+                            <option value="densidad">Densidad</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <select
+                            value={selectedFilterValue}
+                            onChange={(e) => setSelectedFilterValue(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '6px',
+                                borderRadius: '4px',
+                                fontSize: '0.85rem'
+                            }}
+                        >
+                            <option value="">Todos</option>
+                            {uniqueValues.map((value, index) => (
+                                <option key={index} value={value}>
+                                    {value.charAt(0).toUpperCase() + value.slice(1)}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <select
+                            value={densityFilter}
+                            onChange={(e) => setDensityFilter(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '6px',
+                                borderRadius: '4px',
+                                fontSize: '0.85rem'
+                            }}
+                        >
+                            <option value="">Cualq. densidad</option>
+                            <option value="baja">Baja</option>
+                            <option value="media">Media</option>
+                            <option value="alta">Alta</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
-                <label>Filtrar por:</label>
-                <select
-                    value={filterBy}
-                    onChange={(e) => {
-                        setFilterBy(e.target.value);
-                        setSelectedFilterValue(''); // Resetear la selección de valor al cambiar el filtro
-                    }}
-                    style={{ padding: '5px', borderRadius: '4px' }}
-                >
-                    <option value="tipoBiomasa">Tipo</option>
-                    <option value="estadoConservacion">Estado</option>
-                </select>
-            </div>
-
-            <div style={{ marginBottom: '15px' }}>
-                {uniqueValues.length > 0 && (
-                    <select
-                        value={selectedFilterValue}
-                        onChange={(e) => setSelectedFilterValue(e.target.value)}
-                        style={{ padding: '5px', borderRadius: '4px' }}
-                    >
-                        <option value="">Seleccionar...</option> {/* Modificado aquí */}
-                        {uniqueValues.map((value, index) => (
-                            <option key={index} value={value}>
-                                {value}
-                            </option>
-                        ))}
-                    </select>
-                )}
-            </div>
-
-            <div style={{ overflowY: 'auto', flex: 1 }}>
+            {/* Lista de biomasas */}
+            <div style={{
+                overflowY: 'auto',
+                flex: 1,
+                paddingRight: '5px',
+                scrollbarWidth: 'thin',
+                '&::-webkit-scrollbar': {
+                    width: '6px'
+                },
+                '&::-webkit-scrollbar-thumb': {
+                    backgroundColor: colors.lightGray,
+                    borderRadius: '3px'
+                }
+            }}>
                 {filteredBiomasas.length === 0 ? (
-                    <p style={{ textAlign: 'center', color: colors.gray }}>No hay biomasas registradas</p>
+                    <div style={{
+                        textAlign: 'center',
+                        color: colors.gray,
+                        padding: '20px 0'
+                    }}>
+                        No hay biomasas que coincidan con los filtros
+                    </div>
                 ) : (
-                    <div style={{ display: 'grid', gap: '10px' }}>
+                    <div style={{
+                        display: 'grid',
+                        gap: '8px',
+                        gridTemplateColumns: '1fr'
+                    }}>
                         {filteredBiomasas.map(biomasa => (
                             <div
                                 key={biomasa.id}
                                 onClick={() => onSelect(biomasa)}
                                 style={{
                                     backgroundColor: selectedId === biomasa.id ? colors.lightPrimary : 'white',
-                                    border: `1px solid ${colors.lightGray}`,
+                                    border: `1px solid ${selectedId === biomasa.id ? colors.primary : colors.lightGray}`,
                                     borderRadius: '6px',
-                                    padding: '10px',
+                                    padding: '12px',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s',
                                     ':hover': {
+                                        borderColor: colors.primary,
                                         boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                                     }
                                 }}
                             >
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <strong style={{ color: colors.primary }}>
-                                        {biomasa.tipoBiomasa}
-                                    </strong>
-                                    <span style={{ color: colors.gray }}>
-                                        {new Date(biomasa.fecha).toLocaleDateString()}
-                                    </span>
-                                </div>
                                 <div style={{
                                     display: 'flex',
                                     justifyContent: 'space-between',
-                                    marginTop: '5px'
+                                    alignItems: 'center',
+                                    marginBottom: '6px'
                                 }}>
-                                    <span>Área: {biomasa.area} km²</span>
+                                    <strong style={{
+                                        color: colors.primary,
+                                        fontSize: '0.95rem'
+                                    }}>
+                                        {biomasa.tipoBiomasa?.charAt(0).toUpperCase() + biomasa.tipoBiomasa?.slice(1)}
+                                    </strong>
+                                    <span style={{
+                                        color: colors.gray,
+                                        fontSize: '0.8rem'
+                                    }}>
+                                        {biomasa.fecha ? new Date(biomasa.fecha).toLocaleDateString() : 'Sin fecha'}
+                                    </span>
+                                </div>
+
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: '6px',
+                                    fontSize: '0.85rem'
+                                }}>
+                                    <span>Área: {biomasa.area || '--'} km²</span>
                                     <span style={{
                                         backgroundColor: getStatusColor(biomasa.estadoConservacion),
                                         color: 'white',
                                         padding: '2px 8px',
                                         borderRadius: '12px',
-                                        fontSize: '0.8em'
+                                        fontSize: '0.75rem'
                                     }}>
-                                        {biomasa.estadoConservacion}
+                                        {biomasa.estadoConservacion?.charAt(0).toUpperCase() + biomasa.estadoConservacion?.slice(1)}
                                     </span>
                                 </div>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDelete(biomasa.id);
-                                    }}
-                                    style={{
-                                        float: 'right',
-                                        background: 'none',
-                                        border: 'none',
-                                        color: colors.danger,
-                                        cursor: 'pointer',
-                                        marginTop: '5px'
-                                    }}
-                                >
-                                    Eliminar
-                                </button>
+
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
+                                }}>
+                                    <span style={{ fontSize: '0.85rem' }}>Densidad: </span>
+                                    <span style={{
+                                        backgroundColor: getDensityColor(biomasa.densidad),
+                                        color: 'white',
+                                        padding: '2px 8px',
+                                        borderRadius: '12px',
+                                        fontSize: '0.75rem'
+                                    }}>
+                                        {biomasa.densidad?.charAt(0).toUpperCase() + biomasa.densidad?.slice(1)}
+                                    </span>
+
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onDelete(biomasa.id);
+                                        }}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            color: colors.danger,
+                                            cursor: 'pointer',
+                                            fontSize: '0.8rem',
+                                            padding: '2px 6px',
+                                            ':hover': {
+                                                textDecoration: 'underline'
+                                            }
+                                        }}
+                                    >
+                                        Eliminar
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -157,12 +282,24 @@ const BiomasaList = ({ biomasas, onSelect, onDelete, selectedId }) => {
     );
 };
 
+// Helper functions
 function getStatusColor(status) {
+    if (!status) return colors.gray;
     switch(status.toLowerCase()) {
         case 'excelente': return colors.success;
         case 'bueno': return colors.info;
         case 'regular': return colors.warning;
         case 'degradado': return colors.danger;
+        default: return colors.gray;
+    }
+}
+
+function getDensityColor(density) {
+    if (!density) return colors.gray;
+    switch(density.toLowerCase()) {
+        case 'alta': return '#2e7d32'; // Verde oscuro
+        case 'media': return '#7cb342'; // Verde medio
+        case 'baja': return '#c0ca33'; // Verde claro/amarillento
         default: return colors.gray;
     }
 }
