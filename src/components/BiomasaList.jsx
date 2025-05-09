@@ -10,13 +10,10 @@ const BiomasaList = ({ biomasas, onDelete, onFiltered }) => {
     // Valores únicos para cada filtro
     const uniqueValues = useMemo(() => {
         if (filterBy === 'tipoBiomasa') {
-            return ['bosque', 'sabana', 'humedal', 'pastizal', 'matorral arbustivo'];
+            return ['bosque', 'sabana', 'humedal', 'pastizal', 'arbustivo'];
         }
         if (filterBy === 'estadoConservacion') {
             return ['excelente', 'bueno', 'regular', 'degradado'];
-        }
-        if (filterBy === 'densidad') {
-            return ['baja', 'media', 'alta'];
         }
         return [];
     }, [filterBy]);
@@ -37,12 +34,11 @@ const BiomasaList = ({ biomasas, onDelete, onFiltered }) => {
         });
     }, [filter, selectedFilterValue, filterBy, densityFilter, biomasas]);
 
-    // Usamos useEffect para pasar los resultados filtrados a Dashboard después de cada renderizado
     useEffect(() => {
         if (onFiltered) {
-            onFiltered(filteredBiomasas); // Solo pasa el resultado filtrado a Dashboard
+            onFiltered(filteredBiomasas);
         }
-    }, [filteredBiomasas, onFiltered]); // Se ejecuta solo cuando filteredBiomasas cambia
+    }, [filteredBiomasas, onFiltered]);
 
     return (
         <div style={{
@@ -51,16 +47,17 @@ const BiomasaList = ({ biomasas, onDelete, onFiltered }) => {
             padding: '15px',
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
             height: '100%',
+            width: '100%',
             maxHeight: 'calc(100vh - 200px)',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column'
         }}>
             <h3 style={{
-                marginTop: 0,
-                marginBottom: '15px',
+                margin: '0 0 15px 0',
                 color: colors.primary,
-                fontSize: '1.2rem'
+                fontSize: '1.2rem',
+                fontWeight: '500'
             }}>
                 Áreas de Biomasa ({filteredBiomasas.length})
             </h3>
@@ -70,9 +67,10 @@ const BiomasaList = ({ biomasas, onDelete, onFiltered }) => {
                 marginBottom: '15px',
                 display: 'grid',
                 gridTemplateColumns: '1fr',
-                gap: '10px'
+                gap: '10px',
+                width: '100%'
             }}>
-                <div>
+                <div style={{width: '100%'}}>
                     <input
                         type="text"
                         placeholder="Buscar..."
@@ -80,10 +78,11 @@ const BiomasaList = ({ biomasas, onDelete, onFiltered }) => {
                         onChange={(e) => setFilter(e.target.value)}
                         style={{
                             width: '100%',
-                            padding: '8px',
+                            padding: '8px 10px',
                             borderRadius: '4px',
                             border: `1px solid ${colors.lightGray}`,
-                            fontSize: '0.9rem'
+                            fontSize: '0.9rem',
+                            boxSizing: 'border-box'
                         }}
                     />
                 </div>
@@ -91,7 +90,8 @@ const BiomasaList = ({ biomasas, onDelete, onFiltered }) => {
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-                    gap: '8px'
+                    gap: '8px',
+                    width: '100%'
                 }}>
                     <div>
                         <select
@@ -102,14 +102,14 @@ const BiomasaList = ({ biomasas, onDelete, onFiltered }) => {
                             }}
                             style={{
                                 width: '100%',
-                                padding: '6px',
+                                padding: '6px 8px',
                                 borderRadius: '4px',
-                                fontSize: '0.85rem'
+                                fontSize: '0.85rem',
+                                border: `1px solid ${colors.lightGray}`
                             }}
                         >
                             <option value="tipoBiomasa">Tipo</option>
                             <option value="estadoConservacion">Estado</option>
-                            <option value="densidad">Densidad</option>
                         </select>
                     </div>
 
@@ -119,9 +119,10 @@ const BiomasaList = ({ biomasas, onDelete, onFiltered }) => {
                             onChange={(e) => setSelectedFilterValue(e.target.value)}
                             style={{
                                 width: '100%',
-                                padding: '6px',
+                                padding: '6px 8px',
                                 borderRadius: '4px',
-                                fontSize: '0.85rem'
+                                fontSize: '0.85rem',
+                                border: `1px solid ${colors.lightGray}`
                             }}
                         >
                             <option value="">Todos</option>
@@ -139,9 +140,10 @@ const BiomasaList = ({ biomasas, onDelete, onFiltered }) => {
                             onChange={(e) => setDensityFilter(e.target.value)}
                             style={{
                                 width: '100%',
-                                padding: '6px',
+                                padding: '6px 8px',
                                 borderRadius: '4px',
-                                fontSize: '0.85rem'
+                                fontSize: '0.85rem',
+                                border: `1px solid ${colors.lightGray}`
                             }}
                         >
                             <option value="">Cualq. densidad</option>
@@ -158,28 +160,36 @@ const BiomasaList = ({ biomasas, onDelete, onFiltered }) => {
                 overflowY: 'auto',
                 flex: 1,
                 paddingRight: '5px',
+                width: '100%',
+                boxSizing: 'border-box',
                 scrollbarWidth: 'thin',
-                '&::-webkit-scrollbar': {
+                scrollbarColor: `${colors.lightGray} transparent`,
+                '::-webkit-scrollbar': {
                     width: '6px'
                 },
-                '&::-webkit-scrollbar-thumb': {
+                '::-webkit-scrollbar-thumb': {
                     backgroundColor: colors.lightGray,
                     borderRadius: '3px'
+                },
+                '::-webkit-scrollbar-track': {
+                    backgroundColor: 'transparent'
                 }
             }}>
                 {filteredBiomasas.length === 0 ? (
                     <div style={{
                         textAlign: 'center',
                         color: colors.gray,
-                        padding: '20px 0'
+                        padding: '20px 0',
+                        fontSize: '0.9rem'
                     }}>
                         No hay biomasas que coincidan con los filtros
                     </div>
                 ) : (
                     <div style={{
                         display: 'grid',
-                        gap: '8px',
-                        gridTemplateColumns: '1fr'
+                        gap: '10px',
+                        gridTemplateColumns: '1fr',
+                        width: '100%'
                     }}>
                         {filteredBiomasas.map(biomasa => (
                             <div
@@ -190,24 +200,32 @@ const BiomasaList = ({ biomasas, onDelete, onFiltered }) => {
                                     borderRadius: '6px',
                                     padding: '12px',
                                     cursor: 'pointer',
-                                    transition: 'all 0.2s'
+                                    transition: 'all 0.2s',
+                                    width: '100%',
+                                    boxSizing: 'border-box'
                                 }}
                             >
                                 <div style={{
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
-                                    marginBottom: '6px'
+                                    marginBottom: '6px',
+                                    width: '100%'
                                 }}>
                                     <strong style={{
                                         color: colors.primary,
-                                        fontSize: '0.95rem'
+                                        fontSize: '0.95rem',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        maxWidth: '60%'
                                     }}>
                                         {biomasa.tipoBiomasa?.charAt(0).toUpperCase() + biomasa.tipoBiomasa?.slice(1)}
                                     </strong>
                                     <span style={{
                                         color: colors.gray,
-                                        fontSize: '0.8rem'
+                                        fontSize: '0.8rem',
+                                        whiteSpace: 'nowrap'
                                     }}>
                                         {biomasa.fecha ? new Date(biomasa.fecha).toLocaleDateString() : 'Sin fecha'}
                                     </span>
@@ -218,15 +236,17 @@ const BiomasaList = ({ biomasas, onDelete, onFiltered }) => {
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
                                     marginBottom: '6px',
-                                    fontSize: '0.85rem'
+                                    fontSize: '0.85rem',
+                                    width: '100%'
                                 }}>
-                                    <span>Área: {biomasa.area || '--'} km²</span>
+                                    <span style={{whiteSpace: 'nowrap'}}>Área: {biomasa.area || '--'} km²</span>
                                     <span style={{
                                         backgroundColor: getStatusColor(biomasa.estadoConservacion),
                                         color: 'white',
                                         padding: '2px 8px',
                                         borderRadius: '12px',
-                                        fontSize: '0.75rem'
+                                        fontSize: '0.75rem',
+                                        whiteSpace: 'nowrap'
                                     }}>
                                         {biomasa.estadoConservacion?.charAt(0).toUpperCase() + biomasa.estadoConservacion?.slice(1)}
                                     </span>
@@ -235,18 +255,22 @@ const BiomasaList = ({ biomasas, onDelete, onFiltered }) => {
                                 <div style={{
                                     display: 'flex',
                                     justifyContent: 'space-between',
-                                    alignItems: 'center'
+                                    alignItems: 'center',
+                                    width: '100%'
                                 }}>
-                                    <span style={{ fontSize: '0.85rem' }}>Densidad: </span>
-                                    <span style={{
-                                        backgroundColor: getDensityColor(biomasa.densidad),
-                                        color: 'white',
-                                        padding: '2px 8px',
-                                        borderRadius: '12px',
-                                        fontSize: '0.75rem'
-                                    }}>
-                                        {biomasa.densidad?.charAt(0).toUpperCase() + biomasa.densidad?.slice(1)}
-                                    </span>
+                                    <div style={{display: 'flex', alignItems: 'center', gap: '5px'}}>
+                                        <span style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>Densidad: </span>
+                                        <span style={{
+                                            backgroundColor: getDensityColor(biomasa.densidad),
+                                            color: 'white',
+                                            padding: '2px 8px',
+                                            borderRadius: '12px',
+                                            fontSize: '0.75rem',
+                                            whiteSpace: 'nowrap'
+                                        }}>
+                                            {biomasa.densidad?.charAt(0).toUpperCase() + biomasa.densidad?.slice(1)}
+                                        </span>
+                                    </div>
 
                                     <button
                                         onClick={(e) => {
@@ -259,7 +283,8 @@ const BiomasaList = ({ biomasas, onDelete, onFiltered }) => {
                                             color: colors.danger,
                                             cursor: 'pointer',
                                             fontSize: '0.8rem',
-                                            padding: '2px 6px'
+                                            padding: '2px 6px',
+                                            whiteSpace: 'nowrap'
                                         }}
                                     >
                                         Eliminar
@@ -289,9 +314,9 @@ function getStatusColor(status) {
 function getDensityColor(density) {
     if (!density) return colors.gray;
     switch(density.toLowerCase()) {
-        case 'alta': return '#2e7d32'; // Verde oscuro
-        case 'media': return '#7cb342'; // Verde medio
-        case 'baja': return '#c0ca33'; // Verde claro/amarillento
+        case 'alta': return '#2e7d32';
+        case 'media': return '#7cb342';
+        case 'baja': return '#c0ca33';
         default: return colors.gray;
     }
 }

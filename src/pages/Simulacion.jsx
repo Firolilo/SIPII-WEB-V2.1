@@ -666,13 +666,15 @@ const Simulacion = () => {
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
                         gap: '20px',
-                        marginBottom: '20px'
+                        marginBottom: '20px',
+                        position: 'relative' // Asegúrate de que el contenedor no bloquee las interacciones
                     }}>
                         <div style={{
                             backgroundColor: 'white',
                             padding: '15px',
                             borderRadius: sizes.borderRadius,
-                            boxShadow: sizes.boxShadow
+                            boxShadow: sizes.boxShadow,
+                            position: 'relative' // Esto asegura que los elementos dentro de este contenedor no afecten la interactividad
                         }}>
                             <h4 style={{ marginTop: 0, color: colors.primary }}>Dirección Viento</h4>
                             <RangeInput
@@ -737,7 +739,8 @@ const Simulacion = () => {
                             backgroundColor: 'white',
                             padding: '15px',
                             borderRadius: sizes.borderRadius,
-                            boxShadow: sizes.boxShadow
+                            boxShadow: sizes.boxShadow,
+                            position: 'relative' // Asegúrate de que este contenedor no bloquee las interacciones
                         }}>
                             <h4 style={{ marginTop: 0, color: colors.primary }}>Riesgo de Incendio</h4>
                             <p style={{
@@ -763,6 +766,7 @@ const Simulacion = () => {
                             </div>
                         </div>
                     </div>
+
 
                     <div style={{
                         height: '300px',
