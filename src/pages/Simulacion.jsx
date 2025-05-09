@@ -17,51 +17,51 @@ import {gql, useMutation, useQuery} from "@apollo/client";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 const UPDATE_NAME = gql`
-    mutation UpdateName($id: ID!, $name: String!) {
-        updateFireRiskName(id: $id, name: $name) {
-            id
-            name
-        }
+  mutation UpdateName($id: ID!, $name: String!) {
+    updateFireRiskName(id: $id, name: $name) {
+      id
+      name
     }
+  }
 `;
 
 const SAVE_SIMULATION = gql`
-    mutation SaveSimulation($input: SimulationInput!) {
-        saveSimulation(input: $input) {
-            id
-            timestamp
-        }
+  mutation SaveSimulation($input: SimulationInput!) {
+    saveSimulation(input: $input) {
+      id
+      timestamp
     }
+  }
 `;
 
 const GET_HISTORICAL_DATA = gql`
-    query GetHistoricalData {
-        getChiquitosFireRiskData(count: 10) {
-            id
-            timestamp
-            duration
-            name
-            location
-            fireRisk
-            parameters {
-                temperature
-                humidity
-                windSpeed
-                windDirection
-                simulationSpeed
-            }
-            initialFires {
-                lat
-                lng
-                intensity
-            }
-        }
+  query GetHistoricalData {
+    getChiquitosFireRiskData(count: 10) {
+      id
+      timestamp
+      duration
+      name
+      location   
+      fireRisk
+      parameters { 
+        temperature
+        humidity
+        windSpeed
+        windDirection
+        simulationSpeed
+      }
+       initialFires {       
+        lat
+        lng
+        intensity
+      }
     }
+  }
 `;
 const DELETE_SIMULATION = gql`
-    mutation DeleteSimulation($id: ID!) {
-        deleteFireRiskData(id: $id)
-    }
+  mutation DeleteSimulation($id: ID!) {
+    deleteFireRiskData(id: $id)
+  }
 `;
 const SIMULATION_CONFIG = {
     MAX_ACTIVE_FIRES: 50,
@@ -122,6 +122,7 @@ const Simulacion = () => {
     const [updateName] = useMutation(UPDATE_NAME);
 
     const { data: historicalData, refetch: refetchHistoricalData } = useQuery(GET_HISTORICAL_DATA);
+    const [isRepeatedSimulation, setIsRepeatedSimulation] = useState(false);
 
     // Formatear datos históricos
     const formattedHistory = historicalData?.getChiquitosFireRiskData
@@ -131,6 +132,7 @@ const Simulacion = () => {
             nombre: item.name || item.location,      // ← muestra location si name vacío
             tieneNombre: !!item.name,
             duracion: item.duration ? `${item.duration}s` : '—',
+            duration: item.duration || 20,
             focos: item.initialFires?.length ?? 0,       // nuevo
             parameters: item.parameters,
             initialFires: item.initialFires
@@ -256,17 +258,14 @@ const Simulacion = () => {
             // Actualizar datos históricos
             await refetchHistoricalData();
         } catch (error) {
-            // 🔍 1. Muestra TODO el objeto de error en la consola
             console.error("🛑 Error completo al guardar:", JSON.stringify(error, null, 2));
 
-            // 🔍 2. Extrae el mensaje más descriptivo que exista
             const errorMessage =
                 error?.graphQLErrors?.[0]?.message ||   // error del resolver
                 error?.networkError?.message ||         // error de red genérico
                 error.message ||                        // fallback
                 "Error desconocido";
 
-            // 🔔 3. Muéstralo al usuario
             showNotification(`Error al guardar: ${errorMessage}`, "error");
         }
     };
@@ -278,7 +277,7 @@ const Simulacion = () => {
         simulationSpeed
     });
 
-    const repeatSimulation = (parameters, initialFires) => {
+    const repeatSimulation = (parameters, initialFires, originalDuration) => {
         if (!parameters || !initialFires || !Array.isArray(initialFires)) {
             showNotification("No se pudo cargar esta simulación: datos incompletos", "error");
             return;
@@ -302,9 +301,14 @@ const Simulacion = () => {
 
         setFires(newFires);
         setInitialFires(newFires);
+        setIsRepeatedSimulation(true);
+        setAutoStopDuration(originalDuration);
+        setShowHistoryModal(false);
         setSimulationActive(true);
         showNotification("Simulación cargada - Iniciando...", "success");
+
     };
+    const [autoStopDuration, setAutoStopDuration] = useState( 20);
 
     const addFire = (lat, lng) => {
         if (fires.length < SIMULATION_CONFIG.MAX_ACTIVE_FIRES * 2) {
@@ -333,6 +337,7 @@ const Simulacion = () => {
         if (!simulationActive) {
             setTimeElapsed(0);
             setIsAutoStop(false);
+            setAutoStopDuration(20);
         }
         setSimulationActive(!simulationActive);
     };
@@ -343,6 +348,7 @@ const Simulacion = () => {
         setSimulationActive(false);
         setTimeElapsed(0);
         setIsAutoStop(false);
+        setAutoStopDuration(20);
         showNotification("Simulación reiniciada", "info");
     };
 
@@ -352,11 +358,11 @@ const Simulacion = () => {
         const interval = setInterval(() => {
             setTimeElapsed(prev => {
                 const newTime = prev + 1;
-                if (newTime >= 20) {
+                if (newTime >= autoStopDuration) {
                     setIsAutoStop(true);
                     setSimulationActive(false);
                     setShowSaveModal(true);
-                    return 20;
+                    return autoStopDuration;
                 }
                 return newTime;
             });
@@ -428,13 +434,22 @@ const Simulacion = () => {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [simulationActive, windDirection, windSpeed, temperature, humidity, simulationSpeed, fireRisk, timeElapsed]);
+    }, [simulationActive, windDirection, windSpeed, temperature, humidity, simulationSpeed, fireRisk, timeElapsed,autoStopDuration]);
 
     useEffect(() => {
         if (!simulationActive && !isAutoStop && timeElapsed > 0) {
-            setShowSaveModal(true);
+            if (isRepeatedSimulation) {
+                setShowSaveModal(false);
+                setShowHistoryModal(false);
+                setIsRepeatedSimulation(true);
+                setShowRepeatedEndModal(true);
+
+            } else {
+                setShowSaveModal(true);
+            }
         }
-    }, [simulationActive, isAutoStop, timeElapsed]);
+    }, [simulationActive, isAutoStop, timeElapsed,isRepeatedSimulation]);
+    const [showRepeatedEndModal, setShowRepeatedEndModal] = useState(false);
 
     useEffect(() => {
         const activeFires = fires.filter(f => f.active);
@@ -492,10 +507,9 @@ const Simulacion = () => {
     const handleRepeat = () => {
         setShowSaveModal(false);
 
-        // ⚠️ deja intactos initialFires y sólo resetea contadores
         setTimeElapsed(0);
         setIsAutoStop(false);
-
+        setAutoStopDuration(timeElapsed);
         // Usa repeatSimulation con los datos en memoria
         repeatSimulation(
             buildCurrentParameters(),
@@ -503,7 +517,8 @@ const Simulacion = () => {
                 lat: f.position[0],
                 lng: f.position[1],
                 intensity: f.intensity
-            }))
+            })),
+            autoStopDuration
         );
     };
 
@@ -783,7 +798,73 @@ const Simulacion = () => {
                     </div>
                 </Card>
             </main>
+            {showRepeatedEndModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        padding: '2rem',
+                        borderRadius: sizes.borderRadius,
+                        boxShadow: sizes.boxShadow,
+                        minWidth: '400px',
+                        textAlign: 'center'
+                    }}>
+                        <h3 style={{
+                            marginTop: 0,
+                            color: colors.danger,
+                            fontSize: '1.5rem'
+                        }}>
+                            🏁 Simulación Terminada
+                        </h3>
 
+                        <div style={{
+                            display: 'flex',
+                            gap: '1rem',
+                            justifyContent: 'center',
+                            marginTop: '1.5rem'
+                        }}>
+                            <Button
+                                onClick={() => {
+                                    handleRepeat();
+                                    setShowRepeatedEndModal(false);
+                                }}
+                                style={{
+                                    backgroundColor: '#4CAF50',
+                                    color: 'white',
+                                    padding: '10px 20px'
+                                }}
+                            >
+                                🔄 Repetir
+                            </Button>
+
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setShowRepeatedEndModal(false);
+                                    clearFires();
+                                }}
+                                style={{
+                                    borderColor: colors.danger,
+                                    color: colors.danger,
+                                    padding: '10px 20px'
+                                }}
+                            >
+                                🚪 Salir
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* Modal de Guardar Simulación */}
             {showSaveModal && (
                 <div style={{
@@ -807,7 +888,7 @@ const Simulacion = () => {
                         textAlign: 'center'
                     }}>
                         <h3 style={{ marginTop: 0, color: colors.primary }}>
-                            {timeElapsed >= 20 ? "Simulación completada" : "Simulación detenida"}
+                            {timeElapsed >= autoStopDuration ? "Simulación completada" : "Simulación detenida"}
                         </h3>
                         <div style={{
                             display: 'flex',
@@ -827,7 +908,10 @@ const Simulacion = () => {
                                 </Button>
                                 <Button
                                     variant="outline"
-                                    onClick={handleRepeat}
+                                    onClick={() => {
+                                        handleRepeat();
+                                        setShowSaveModal(false);
+                                    }}
                                 >
                                     Repetir
                                 </Button>
@@ -869,7 +953,7 @@ const Simulacion = () => {
                                 gap: '10px'
                             }}
                         >
-                            📋 Historial de Simulaciones
+                            Historial de Simulaciones
                         </h3>
 
                         <div style={{margin: '1.5rem 0'}}>
@@ -939,18 +1023,42 @@ const Simulacion = () => {
                                         <td style={{padding: '8px'}}>
                                             <Button
                                                 variant="text"
-                                                onClick={() =>
-                                                    repeatSimulation(item.parameters, item.initialFires)
-                                                }
-                                                style={{padding: '4px 8px'}}
-                                            >
+                                                onClick={() => {
+                                                    repeatSimulation(item.parameters, item.initialFires, item.duration);
+                                                    setShowHistoryModal(false);
+                                                }}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    backgroundColor: '#4CAF50', // Verde vibrante
+                                                    color: 'white',
+                                                    borderRadius: '8px',
+                                                    fontWeight: '600',
+                                                    transition: 'all 0.3s',
+                                                    ':hover': {
+                                                        backgroundColor: '#45a049',
+                                                        transform: 'scale(1.05)'
+                                                    }
+                                                }}
+                                            >                                            >
                                                 Repetir
                                             </Button>
 
                                             {user?.role === 'admin' && (
                                                 <Button
                                                     variant="danger"
-                                                    style={{marginLeft: 8, padding: '4px 8px'}}
+                                                    style={{
+                                                        marginLeft: '8px',
+                                                        padding: '6px 12px',
+                                                        backgroundColor: '#ff4444', // Rojo intenso
+                                                        color: 'white',
+                                                        borderRadius: '8px',
+                                                        fontWeight: '600',
+                                                        transition: 'all 0.3s',
+                                                        ':hover': {
+                                                            backgroundColor: '#cc0000',
+                                                            transform: 'scale(1.05)'
+                                                        }
+                                                    }}
                                                     onClick={async () => {
                                                         if (!window.confirm('¿Eliminar esta simulación?')) return;
                                                         try {
