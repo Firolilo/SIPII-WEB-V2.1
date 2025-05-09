@@ -16,14 +16,12 @@ import { getWeatherData } from '../services/weatherAPI';
 import { getFireData } from '../services/firmsAPI';
 import BiomasaList from "../components/BiomasaList";
 
-// Configuración del icono para incendios
 const fireIcon = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
     iconSize: [25, 41],
     iconAnchor: [12, 41]
 });
 
-// Componente para manejar el redimensionamiento del mapa
 function MapResizer() {
     const map = useMap();
 
@@ -44,10 +42,10 @@ const Dashboard = () => {
     const { user, logout } = useAuth();
     const { showNotification } = useNotification();
 
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
     const [biomasaData, setBiomasaData] = useState([]);
+    const [filteredBiomasas, setFilteredBiomasas] = useState([]);
     const [editingIndex, setEditingIndex] = useState(null);
     const [editForm, setEditForm] = useState({
         tipoBiomasa: '',
@@ -63,6 +61,7 @@ const Dashboard = () => {
     useEffect(() => {
         const storedData = JSON.parse(localStorage.getItem("biomasaReportes") || "[]");
         setBiomasaData(storedData);
+        setFilteredBiomasas(storedData); // Inicialmente, mostrar todas las biomasas
         document.title = "Dashboard - SIPII";
 
         // Forzar redimensionamiento del mapa después de cargar los datos
@@ -73,9 +72,16 @@ const Dashboard = () => {
             }
         }, 500);
 
+        setLoading(false);
+
         return () => clearTimeout(timer);
     }, []);
 
+    // Función para manejar el filtrado
+    const handleFilteredBiomasas = (filtered) => {
+        setFilteredBiomasas(filtered);
+        console.log(filtered)
+    };
     // Manejar eliminación de reporte de biomasa
     const handleDeleteBiomasa = (index) => {
         const newBiomasaData = biomasaData.filter((_, i) => i !== index);
@@ -147,37 +153,16 @@ const Dashboard = () => {
     if (error) return <ErrorDisplay error={error} />;
 
     return (
-        <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: '100vh',
-            backgroundColor: colors.background
-        }}>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: colors.background }}>
             <NavBar user={user} onLogout={logout} />
 
-            <main style={{
-                flex: 1,
-                padding: '20px',
-                maxWidth: '1200px',
-                width: '100%',
-                margin: '0 auto',
-                display: 'grid',
-                gridTemplateColumns: '1fr 300px',
-                gap: '20px'
-            }}>
+            <main style={{ flex: 1, padding: '20px', maxWidth: '1200px', width: '100%', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 300px', gap: '20px' }}>
                 <div>
                     {/* Contenedor del Mapa */}
-                    <div style={{
-                        height: '500px',
-                        borderRadius: '8px',
-                        overflow: 'hidden',
-                        marginBottom: '20px',
-                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                        position: 'relative'
-                    }}>
+                    <div style={{ height: '500px', borderRadius: '8px', overflow: 'hidden', marginBottom: '20px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', position: 'relative' }}>
                         <MapContainer
-                            center={defaultPosition}
-                            zoom={fireData.length > 0 ? 10 : 7}
+                            center={[-17.8, -61.5]}
+                            zoom={filteredBiomasas.length > 0 ? 10 : 7}
                             scrollWheelZoom={true}
                             style={{ height: '100%', width: '100%' }}
                         >
@@ -187,13 +172,9 @@ const Dashboard = () => {
                             />
                             <MapResizer />
 
-                            {/* Marcador de incendio */}
+                            {/* Marcadores de incendio */}
                             {fireData.map((fire, index) => (
-                                <Marker
-                                    key={`fire-${index}`}
-                                    position={[fire.lat, fire.lng]}
-                                    icon={fireIcon}
-                                >
+                                <Marker key={`fire-${index}`} position={[fire.lat, fire.lng]} icon={fireIcon}>
                                     <Popup>
                                         <strong>Punto de calor detectado</strong><br />
                                         Fecha: {new Date(fire.date).toLocaleString()}<br />
@@ -202,221 +183,45 @@ const Dashboard = () => {
                                 </Marker>
                             ))}
 
-                            {/* Polígonos de biomasa - SOLO el seleccionado */}
-                            {selectedBiomasa !== null && biomasaData[selectedBiomasa] && (
+                            {/* Mostrar solo los polígonos filtrados de biomasa */}
+                            {filteredBiomasas.map((biomasa, index) => (
                                 <Polygon
-                                    key={selectedBiomasa}
-                                    positions={biomasaData[selectedBiomasa].coordenadas}
+                                    key={index}
+                                    positions={biomasa.coordenadas}
                                     color={colors.primary}
                                     fillColor={colors.lightPrimary}
                                     fillOpacity={0.8}
                                     weight={3}
                                 >
                                     <Popup>
-                                        {editingIndex === selectedBiomasa ? (
-                                            <div style={{ padding: '10px' }}>
-                                                <div style={{ marginBottom: '10px' }}>
-                                                    <label style={{ display: 'block', marginBottom: '5px' }}>Tipo:</label>
-                                                    <select
-                                                        name="tipoBiomasa"
-                                                        value={editForm.tipoBiomasa}
-                                                        onChange={handleEditChange}
-                                                        style={{ width: '100%', padding: '5px' }}
-                                                    >
-                                                        <option value="bosque">Bosque</option>
-                                                        <option value="sabana">Sabana</option>
-                                                        <option value="humedal">Humedal</option>
-                                                        <option value="pastizal">Pastizal</option>
-                                                        <option value="matorral arbustivo">Matorral Arbustivo</option>
-                                                    </select>
-                                                </div>
-                                                <div style={{ marginBottom: '10px' }}>
-                                                    <label style={{ display: 'block', marginBottom: '5px' }}>Conservación:</label>
-                                                    <select
-                                                        name="estadoConservacion"
-                                                        value={editForm.estadoConservacion}
-                                                        onChange={handleEditChange}
-                                                        style={{ width: '100%', padding: '5px' }}
-                                                    >
-                                                        <option value="excelente">Excelente</option>
-                                                        <option value="bueno">Bueno</option>
-                                                        <option value="regular">Regular</option>
-                                                        <option value="degradado">Degradado</option>
-                                                    </select>
-                                                </div>
-                                                <div style={{ marginBottom: '10px' }}>
-                                                    <label style={{ display: 'block', marginBottom: '5px' }}>Densidad:</label>
-                                                    <select
-                                                        name="densidad"
-                                                        value={editForm.densidad}
-                                                        onChange={handleEditChange}
-                                                        style={{ width: '100%', padding: '5px' }}
-                                                    >
-                                                        <option value="baja">Baja</option>
-                                                        <option value="media">Media</option>
-                                                        <option value="alta">Alta</option>
-                                                    </select>
-                                                </div>
-                                                <div style={{ marginBottom: '10px' }}>
-                                                    <label style={{ display: 'block', marginBottom: '5px' }}>Área (km²):</label>
-                                                    <input
-                                                        type="text"
-                                                        name="area"
-                                                        value={editForm.area}
-                                                        onChange={handleEditChange}
-                                                        style={{ width: '100%', padding: '5px' }}
-                                                    />
-                                                </div>
-                                                <div style={{ marginBottom: '10px' }}>
-                                                    <label style={{ display: 'block', marginBottom: '5px' }}>Fecha:</label>
-                                                    <input
-                                                        type="date"
-                                                        name="fecha"
-                                                        value={editForm.fecha}
-                                                        onChange={handleEditChange}
-                                                        style={{ width: '100%', padding: '5px' }}
-                                                    />
-                                                </div>
-                                                <div style={{ marginBottom: '10px' }}>
-                                                    <label style={{ display: 'block', marginBottom: '5px' }}>Observaciones:</label>
-                                                    <textarea
-                                                        name="observaciones"
-                                                        value={editForm.observaciones}
-                                                        onChange={handleEditChange}
-                                                        style={{ width: '100%', padding: '5px', minHeight: '60px' }}
-                                                    />
-                                                </div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                    <button
-                                                        onClick={handleSaveEdit}
-                                                        style={{
-                                                            padding: '5px 10px',
-                                                            backgroundColor: colors.success,
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            borderRadius: '4px',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        Guardar
-                                                    </button>
-                                                    <button
-                                                        onClick={handleCancelEdit}
-                                                        style={{
-                                                            padding: '5px 10px',
-                                                            backgroundColor: colors.danger,
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            borderRadius: '4px',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        Cancelar
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div style={{ padding: '10px' }}>
-                                                <p><strong>Tipo:</strong> {biomasaData[selectedBiomasa].tipoBiomasa?.charAt(0).toUpperCase() + biomasaData[selectedBiomasa].tipoBiomasa?.slice(1)}</p>
-                                                <p><strong>Conservación:</strong> {biomasaData[selectedBiomasa].estadoConservacion?.charAt(0).toUpperCase() + biomasaData[selectedBiomasa].estadoConservacion?.slice(1)}</p>
-                                                <p><strong>Densidad:</strong> {biomasaData[selectedBiomasa].densidad?.charAt(0).toUpperCase() + biomasaData[selectedBiomasa].densidad?.slice(1)}</p>
-                                                <p><strong>Área:</strong> {biomasaData[selectedBiomasa].area} km²</p>
-                                                <p><strong>Fecha:</strong> {biomasaData[selectedBiomasa].fecha}</p>
-                                                <p><strong>Obs.:</strong> {biomasaData[selectedBiomasa].observaciones || "Ninguna"}</p>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleEditBiomasa(selectedBiomasa);
-                                                        }}
-                                                        style={{
-                                                            padding: '5px 10px',
-                                                            backgroundColor: colors.warning,
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            borderRadius: '4px',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        Editar
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDeleteBiomasa(selectedBiomasa);
-                                                        }}
-                                                        style={{
-                                                            padding: '5px 10px',
-                                                            backgroundColor: colors.danger,
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            borderRadius: '4px',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        Eliminar
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
+                                        <strong>{biomasa.tipoBiomasa?.charAt(0).toUpperCase() + biomasa.tipoBiomasa?.slice(1)}</strong><br />
+                                        <strong>Conservación:</strong> {biomasa.estadoConservacion?.charAt(0).toUpperCase() + biomasa.estadoConservacion?.slice(1)}<br />
+                                        <strong>Densidad:</strong> {biomasa.densidad?.charAt(0).toUpperCase() + biomasa.densidad?.slice(1)}<br />
+                                        <strong>Área:</strong> {biomasa.area} km²<br />
+                                        <strong>Fecha:</strong> {biomasa.fecha}<br />
+                                        <strong>Observaciones:</strong> {biomasa.observaciones || "Ninguna"}
                                     </Popup>
                                 </Polygon>
-                            )}
+                            ))}
                         </MapContainer>
                     </div>
 
-                    {/* Estadísticas */}
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                        gap: '20px',
-                        marginBottom: '30px'
-                    }}>
-                        <StatBox
-                            label="Temperatura Actual"
-                            value={`${weatherData?.current_weather?.temperature?.toFixed(1) || '--'}°C`}
-                            color={colors.info}
-                        />
-                        <StatBox
-                            label="Humedad"
-                            value={`${weatherData?.hourly?.relative_humidity_2m?.[0] || '--'}%`}
-                            color={colors.info}
-                        />
-                        <StatBox
-                            label="Precipitación"
-                            value={`${weatherData?.hourly?.precipitation?.[0] || '0'} mm`}
-                            color={colors.info}
-                        />
-                        <StatBox
-                            label="Puntos de calor"
-                            value={fireData.length}
-                            color={fireData.length > 0 ? colors.danger : colors.success}
-                        />
-                        <StatBox
-                            label="Áreas de biomasa"
-                            value={biomasaData.length}
-                            color={colors.success}
-                        />
+                    {/* Otros componentes de estadísticas */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+                        <StatBox label="Temperatura Actual" value={`${weatherData?.current_weather?.temperature?.toFixed(1) || '--'}°C`} color={colors.info} />
+                        <StatBox label="Humedad" value={`${weatherData?.hourly?.relative_humidity_2m?.[0] || '--'}%`} color={colors.info} />
+                        <StatBox label="Precipitación" value={`${weatherData?.hourly?.precipitation?.[0] || '0'} mm`} color={colors.info} />
+                        <StatBox label="Puntos de calor" value={fireData.length} color={fireData.length > 0 ? colors.danger : colors.success} />
+                        <StatBox label="Áreas de biomasa" value={filteredBiomasas.length} color={colors.success} />
                     </div>
 
-                    {/* Detalles del incendio */}
+                    {/* Detalles de incendios */}
                     {fireData.length > 0 && (
-                        <div style={{
-                            backgroundColor: 'white',
-                            padding: '20px',
-                            borderRadius: '8px',
-                            marginBottom: '20px',
-                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-                        }}>
-                            <h3 style={{ color: colors.danger, marginTop: 0 }}>
-                                Alertas de Incendios ({fireData.length})
-                            </h3>
+                        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
+                            <h3 style={{ color: colors.danger, marginTop: 0 }}>Alertas de Incendios ({fireData.length})</h3>
                             {fireData.map((fire, index) => (
                                 <div key={`alert-${index}`} style={{ marginBottom: '10px' }}>
-                                    <p>
-                                        <strong>Punto {index + 1}:</strong>
-                                        Lat: {fire.lat.toFixed(4)}, Lng: {fire.lng.toFixed(4)}
-                                    </p>
+                                    <p><strong>Punto {index + 1}:</strong> Lat: {fire.lat.toFixed(4)}, Lng: {fire.lng.toFixed(4)}</p>
                                     <p>Confianza: {fire.confidence} - {new Date(fire.date).toLocaleString()}</p>
                                 </div>
                             ))}
@@ -426,16 +231,9 @@ const Dashboard = () => {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <BiomasaList
-                        biomasas={biomasaData.map((item, index) => ({
-                            ...item,
-                            id: index,
-                            tipoBiomasa: item.tipoBiomasa?.toLowerCase() || '',
-                            estadoConservacion: item.estadoConservacion?.toLowerCase() || '',
-                            densidad: item.densidad?.toLowerCase() || ''
-                        }))}
-                        onSelect={handleSelectBiomasa}
+                        biomasas={biomasaData}
                         onDelete={handleDeleteBiomasa}
-                        selectedId={selectedBiomasa}
+                        onFiltered={handleFilteredBiomasas}
                     />
                 </div>
             </main>

@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, {useState, useMemo, useEffect} from 'react';
 import { colors } from '../styles/theme';
 
-const BiomasaList = ({ biomasas, onSelect, onDelete, selectedId, onFiltered }) => {
+const BiomasaList = ({ biomasas, onDelete, onFiltered }) => {
     const [filter, setFilter] = useState('');
     const [filterBy, setFilterBy] = useState('tipoBiomasa');
     const [selectedFilterValue, setSelectedFilterValue] = useState('');
@@ -23,7 +23,7 @@ const BiomasaList = ({ biomasas, onSelect, onDelete, selectedId, onFiltered }) =
 
     // Filtrar biomasas
     const filteredBiomasas = useMemo(() => {
-        const result = biomasas.filter(biomasa => {
+        return biomasas.filter(biomasa => {
             const matchesTextFilter = filter === '' ||
                 biomasa[filterBy]?.toString().toLowerCase().includes(filter.toLowerCase());
 
@@ -35,14 +35,14 @@ const BiomasaList = ({ biomasas, onSelect, onDelete, selectedId, onFiltered }) =
 
             return matchesTextFilter && matchesSelectedFilter && matchesDensityFilter;
         });
+    }, [filter, selectedFilterValue, filterBy, densityFilter, biomasas]);
 
-        // Notificar al componente padre sobre la lista filtrada
+    // Usamos useEffect para pasar los resultados filtrados a Dashboard después de cada renderizado
+    useEffect(() => {
         if (onFiltered) {
-            onFiltered(result);
+            onFiltered(filteredBiomasas); // Solo pasa el resultado filtrado a Dashboard
         }
-
-        return result;
-    }, [filter, selectedFilterValue, filterBy, densityFilter, biomasas, onFiltered]);
+    }, [filteredBiomasas, onFiltered]); // Se ejecuta solo cuando filteredBiomasas cambia
 
     return (
         <div style={{
@@ -184,18 +184,13 @@ const BiomasaList = ({ biomasas, onSelect, onDelete, selectedId, onFiltered }) =
                         {filteredBiomasas.map(biomasa => (
                             <div
                                 key={biomasa.id}
-                                onClick={() => onSelect(biomasa)}
                                 style={{
-                                    backgroundColor: selectedId === biomasa.id ? colors.lightPrimary : 'white',
-                                    border: `1px solid ${selectedId === biomasa.id ? colors.primary : colors.lightGray}`,
+                                    backgroundColor: 'white',
+                                    border: `1px solid ${colors.lightGray}`,
                                     borderRadius: '6px',
                                     padding: '12px',
                                     cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    ':hover': {
-                                        borderColor: colors.primary,
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                                    }
+                                    transition: 'all 0.2s'
                                 }}
                             >
                                 <div style={{
@@ -264,10 +259,7 @@ const BiomasaList = ({ biomasas, onSelect, onDelete, selectedId, onFiltered }) =
                                             color: colors.danger,
                                             cursor: 'pointer',
                                             fontSize: '0.8rem',
-                                            padding: '2px 6px',
-                                            ':hover': {
-                                                textDecoration: 'underline'
-                                            }
+                                            padding: '2px 6px'
                                         }}
                                     >
                                         Eliminar
