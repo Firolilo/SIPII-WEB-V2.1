@@ -15,6 +15,15 @@ export const colors = {
     shadow: 'rgba(231, 76, 60, 0.3)'
 };
 
+export const tipoBiomasaColors = {
+    bosque: '#2e7d32',       // Verde bosque
+    sabana: '#fbc02d',       // Amarillo
+    humedal: '#0288d1',      // Azul
+    pastizal: '#8d6e63',     // Marrón claro
+    arbustivo: '#c2185b'     // Rosa oscuro
+};
+
+
 export const sizes = {
     borderRadius: '10px',
     boxShadow: '0 4px 12px rgba(231, 76, 60, 0.2)',

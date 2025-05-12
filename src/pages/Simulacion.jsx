@@ -131,7 +131,7 @@ const Simulacion = () => {
             fecha: new Date(item.timestamp).toLocaleDateString(),
             nombre: item.name || item.location,      // ← muestra location si name vacío
             tieneNombre: !!item.name,
-            duracion: item.duration ? `${item.duration}s` : '—',
+            duracion: item.duration ? `${item.duration}h` : '—',
             duration: item.duration || 20,
             focos: item.initialFires?.length ?? 0,       // nuevo
             parameters: item.parameters,
@@ -584,7 +584,7 @@ const Simulacion = () => {
                     }}>
                         <StatBox
                             label="Tiempo"
-                            value={`${timeElapsed}s`}
+                            value={`${timeElapsed}h`}
                             color={colors.info}
                         />
                         <StatBox

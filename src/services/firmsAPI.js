@@ -35,7 +35,8 @@ function parseCsv(csv) {
                 lat: lat,
                 lng: lng,
                 date: data[6] || 'Fecha desconocida',
-                confidence: !isNaN(parseFloat(data[12])) ? parseFloat(data[12]) : 0
+                confidence: data[10]
+
             });
         } else {
             console.warn('Coordenadas inválidas en línea:', i, data);

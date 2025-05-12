@@ -3,6 +3,7 @@ import {MapContainer, TileLayer, Marker, Popup, Polygon, useMapEvents} from 'rea
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import '../styles/Biomasa.css';
+import * as turf from '@turf/turf';
 import { useNavigate } from "react-router-dom";
 
 
@@ -74,12 +75,17 @@ export default function ReporteBiomasa() {
     };
 
     const calculateArea = (points) => {
-        // Implementación básica de cálculo de área (simplificada)
         if (points.length < 3) return 0;
-        // Cálculo aproximado en km²
-        return (points.length * 0.2).toFixed(2);
-    };
 
+        // Convertir los puntos en un polígono GeoJSON válido
+        const polygon = turf.polygon([[...points, points[0]]]); // Cerramos el polígono
+
+        // Calcular el área en metros cuadrados y convertir a km²
+        const areaInSquareMeters = turf.area(polygon);
+        const areaInKm2 = areaInSquareMeters / 1_000_000;
+
+        return areaInKm2.toFixed(2);
+    };
     const handleSubmit = (e) => {
         e.preventDefault();
         if (polygonPoints.length < 3) {

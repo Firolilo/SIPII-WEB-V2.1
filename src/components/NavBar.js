@@ -1,8 +1,7 @@
-// src/components/NavBar.jsx
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Button from './Button';
-import { colors } from '../styles/theme';
+import { colors, fonts } from '../styles/theme';
 
 const NavBar = ({ user, onLogout }) => {
     const location = useLocation();
@@ -10,39 +9,64 @@ const NavBar = ({ user, onLogout }) => {
     const isActive = (path) => location.pathname === path;
 
     const linkStyle = (path) => ({
-        color: isActive(path) ? '#fff' : '#ffd6d6',
-        textDecoration: 'none',
+        color: isActive(path) ? colors.light : '#f8dada',
         fontWeight: isActive(path) ? 'bold' : 'normal',
-        padding: '0.5rem 1rem',
-        borderRadius: '6px',
-        transition: 'all 0.3s ease',
-        backgroundColor: isActive(path) ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+        textDecoration: 'none',
+        padding: '0.6rem 1rem',
+        borderRadius: '8px',
+        backgroundColor: isActive(path) ? `${colors.light}20` : 'transparent',
+        transition: 'background-color 0.3s, color 0.3s',
+        fontSize: '1rem',
+        display: 'inline-block'
     });
 
     return (
-        <nav
-            style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '1rem 2rem',
-                backgroundColor: colors.secondary,
-                color: 'white',
-                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
-            }}
-        >
-            <div style={{ display: 'flex', gap: '1rem' }}>
-                <Link to="/dashboard" style={linkStyle('/dashboard')}>Inicio</Link>
-                <Link to="/secondPage" style={linkStyle('/secondPage')}>Datos</Link>
-                <Link to="/newPage" style={linkStyle('/newPage')}>Simulación</Link>
-                <Link to="/reporte" style={linkStyle('/reporte')}>Reporte</Link>
-                {user?.nombre === "Administrador" && (
-                    <Link to="/users" style={linkStyle('/users')}>Usuarios</Link>
-                )}
+        <nav style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '1rem 2rem',
+            backgroundColor: colors.secondary,
+            color: colors.light,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+            fontFamily: fonts.primary,
+            position: 'sticky',
+            top: 0,
+            zIndex: 1000
+        }}>
+            {/* Sección izquierda: Logo + Enlaces */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                {/* Nombre del software */}
+                <div style={{
+                    fontWeight: 'bold',
+                    fontSize: '1.4rem',
+                    color: colors.light,
+                    letterSpacing: '1px'
+                }}>
+                    SIPII
+                </div>
+
+                {/* Menú */}
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <Link to="/dashboard" style={linkStyle('/dashboard')}>Inicio</Link>
+                    <Link to="/secondPage" style={linkStyle('/secondPage')}>Datos</Link>
+                    <Link to="/newPage" style={linkStyle('/newPage')}>Simulación</Link>
+                    <Link to="/reporte" style={linkStyle('/reporte')}>Reporte</Link>
+                    {user?.nombre === "Administrador" && (
+                        <Link to="/users" style={linkStyle('/users')}>Usuarios</Link>
+                    )}
+                </div>
             </div>
-            <Button onClick={onLogout} variant="secondary" size="small">
-                Cerrar sesión
-            </Button>
+
+            {/* Sección derecha: Usuario + Cerrar sesión */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>
+                    {user?.nombre || 'Usuario'}
+                </span>
+                <Button onClick={onLogout} variant="secondary" size="small">
+                    Cerrar sesión
+                </Button>
+            </div>
         </nav>
     );
 };

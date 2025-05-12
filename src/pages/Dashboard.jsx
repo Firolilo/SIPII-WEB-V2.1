@@ -11,15 +11,29 @@ import NavBar from '../components/NavBar';
 import StatBox from '../components/StatBox';
 import Loading from '../components/Loading';
 import ErrorDisplay from '../components/ErrorDisplay';
-import { colors } from '../styles/theme';
+import {colors, tipoBiomasaColors} from '../styles/theme';
 import { getWeatherData } from '../services/weatherAPI';
 import { getFireData } from '../services/firmsAPI';
 import BiomasaList from "../components/BiomasaList";
+import FireList from '../components/FireList';
 
-const fireIcon = new L.Icon({
+
+const iconoBaja = new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-grey.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+});
+
+const iconoMedia = new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+});
+
+const iconoAlta = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
     iconSize: [25, 41],
-    iconAnchor: [12, 41]
+    iconAnchor: [12, 41],
 });
 
 function MapResizer() {
@@ -149,6 +163,16 @@ const Dashboard = () => {
         loadAllData();
     }, []);
 
+    const obtenerIconoPorConfianza = (confianza) => {
+        switch (confianza) {
+            case 'l': return iconoBaja;
+            case 'n': return iconoMedia;
+            case 'h': return iconoAlta;
+            default: return iconoMedia;
+        }
+    };
+
+
     if (loading) return <Loading />;
     if (error) return <ErrorDisplay error={error} />;
 
@@ -162,7 +186,7 @@ const Dashboard = () => {
                     <div style={{ height: '500px', borderRadius: '8px', overflow: 'hidden', marginBottom: '20px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', position: 'relative' }}>
                         <MapContainer
                             center={[-17.8, -61.5]}
-                            zoom={filteredBiomasas.length > 0 ? 10 : 7}
+                            zoom={3}
                             scrollWheelZoom={true}
                             style={{ height: '100%', width: '100%' }}
                         >
@@ -174,8 +198,8 @@ const Dashboard = () => {
 
                             {/* Marcadores de incendio */}
                             {fireData.map((fire, index) => (
-                                <Marker key={`fire-${index}`} position={[fire.lat, fire.lng]} icon={fireIcon}>
-                                    <Popup>
+                                <Marker key={`fire-${index}`} position={[fire.lat, fire.lng]} icon={obtenerIconoPorConfianza(fire.confidence)}>
+                                <Popup>
                                         <strong>Punto de calor detectado</strong><br />
                                         Fecha: {new Date(fire.date).toLocaleString()}<br />
                                         Confianza: {fire.confidence}
@@ -188,12 +212,12 @@ const Dashboard = () => {
                                 <Polygon
                                     key={index}
                                     positions={biomasa.coordenadas}
-                                    color={colors.primary}
-                                    fillColor={colors.lightPrimary}
-                                    fillOpacity={0.8}
-                                    weight={3}
+                                    color={tipoBiomasaColors[biomasa.tipoBiomasa] || colors.primary}
+                                    fillColor={tipoBiomasaColors[biomasa.tipoBiomasa] || colors.lightPrimary}
+                                    fillOpacity={0.6}
+                                    weight={2}
                                 >
-                                    <Popup>
+                                <Popup>
                                         <strong>{biomasa.tipoBiomasa?.charAt(0).toUpperCase() + biomasa.tipoBiomasa?.slice(1)}</strong><br />
                                         <strong>Conservación:</strong> {biomasa.estadoConservacion?.charAt(0).toUpperCase() + biomasa.estadoConservacion?.slice(1)}<br />
                                         <strong>Densidad:</strong> {biomasa.densidad?.charAt(0).toUpperCase() + biomasa.densidad?.slice(1)}<br />
@@ -216,17 +240,7 @@ const Dashboard = () => {
                     </div>
 
                     {/* Detalles de incendios */}
-                    {fireData.length > 0 && (
-                        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
-                            <h3 style={{ color: colors.danger, marginTop: 0 }}>Alertas de Incendios ({fireData.length})</h3>
-                            {fireData.map((fire, index) => (
-                                <div key={`alert-${index}`} style={{ marginBottom: '10px' }}>
-                                    <p><strong>Punto {index + 1}:</strong> Lat: {fire.lat.toFixed(4)}, Lng: {fire.lng.toFixed(4)}</p>
-                                    <p>Confianza: {fire.confidence} - {new Date(fire.date).toLocaleString()}</p>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                    <FireList fires={fireData} />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
