@@ -186,7 +186,7 @@ const Dashboard = () => {
                     <div style={{ height: '500px', borderRadius: '8px', overflow: 'hidden', marginBottom: '20px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', position: 'relative' }}>
                         <MapContainer
                             center={[-17.8, -61.5]}
-                            zoom={3}
+                            zoom={7}
                             scrollWheelZoom={true}
                             style={{ height: '100%', width: '100%' }}
                         >
